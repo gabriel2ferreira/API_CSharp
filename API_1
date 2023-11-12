@@ -1,0 +1,121 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+[ApiController]
+[Route("[controller]")]
+public class TarefaController : ControllerBase
+{
+    private readonly SeuDbContext _context;
+
+    public TarefaController(SeuDbContext context)
+    {
+        _context = context;
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> ObterTarefaPorId(int id)
+    {
+        var tarefa = await _context.Tarefas.FindAsync(id);
+
+        if (tarefa == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(tarefa);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> AtualizarTarefa(int id, Tarefa tarefa)
+    {
+        if (id != tarefa.Id)
+        {
+            return BadRequest();
+        }
+
+        _context.Entry(tarefa).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!TarefaExists(id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletarTarefa(int id)
+    {
+        var tarefa = await _context.Tarefas.FindAsync(id);
+        if (tarefa == null)
+    {
+        return NotFound();
+    }
+
+    _context.Tarefas.Remove(tarefa);
+    await _context.SaveChangesAsync();
+
+    return NoContent();
+}
+
+[HttpGet("ObterTodos")]
+public async Task<IActionResult> ObterTodasTarefas()
+{
+    var tarefas = await _context.Tarefas.ToListAsync();
+
+    return Ok(tarefas);
+}
+
+[HttpGet("ObterPorTitulo")]
+public async Task<IActionResult> ObterTarefasPorTitulo(string titulo)
+{
+    var tarefas = await _context.Tarefas.Where(t => t.Titulo.Contains(titulo)).ToListAsync();
+
+    return Ok(tarefas);
+}
+
+[HttpGet("ObterPorData")]
+public async Task<IActionResult> ObterTarefasPorData(DateTime data)
+{
+    var tarefas = await _context.Tarefas.Where(t => t.Data == data).ToListAsync();
+
+    return Ok(tarefas);
+}
+
+[HttpGet("ObterPorStatus")]
+public async Task<IActionResult> ObterTarefasPorStatus(string status)
+{
+    var tarefas = await _context.Tarefas.Where(t => t.Status == status).ToListAsync();
+
+    return Ok(tarefas);
+}
+
+[HttpPost]
+public async Task<IActionResult> CriarTarefa(Tarefa tarefa)
+{
+    // TODO: Adicionar validações, se necessário
+    _context.Tarefas.Add(tarefa);
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(ObterTarefaPorId), new { id = tarefa.Id }, tarefa);
+}
+
+private bool TarefaExists(int id)
+{
+    return _context.Tarefas.Any(e => e.Id == id);
+}
